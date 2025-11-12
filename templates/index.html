@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💬 Sentiment Rating App (Animated)</title>
+
+  <style>
+    /* 🌈 Background Gradient Animation */
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(270deg, #ffb347, #ffcc33, #4facfe, #00f2fe);
+      background-size: 800% 800%;
+      animation: gradientShift 15s ease infinite;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      color: #333;
+      min-height: 100vh;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* 🧱 Container */
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      margin: 50px auto;
+      padding: 30px 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      max-width: 550px;
+      transition: transform 0.3s ease;
+    }
+    .container:hover {
+      transform: scale(1.02);
+    }
+
+    h1 {
+      color: #333;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    p.description {
+      color: #555;
+      font-size: 15px;
+      margin-bottom: 25px;
+    }
+
+    /* ✍️ Inputs */
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+    input:focus, textarea:focus {
+      border-color: #4facfe;
+      box-shadow: 0 0 5px rgba(79, 172, 254, 0.5);
+      outline: none;
+    }
+
+    /* 🔍 Button */
+    button {
+      background: linear-gradient(90deg, #4facfe, #00f2fe);
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.3s ease, background 0.3s ease;
+    }
+    button:hover {
+      transform: scale(1.05);
+      background: linear-gradient(90deg, #00f2fe, #4facfe);
+    }
+
+    /* 💫 Loader animation */
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4facfe;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 📊 Result Section */
+    #result {
+      margin-top: 30px;
+      opacity: 0;
+      transition: opacity 0.6s ease-in-out;
+    }
+    #result.visible {
+      opacity: 1;
+    }
+
+    /* 🎨 Animated Bar */
+    .bar-container {
+      background-color: #ddd;
+      border-radius: 25px;
+      width: 100%;
+      height: 30px;
+      margin: 20px auto;
+      overflow: hidden;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .bar-fill {
+      height: 30px;
+      border-radius: 25px;
+      width: 0%;
+      transition: width 1s ease-in-out, background-color 0.6s ease;
+    }
+
+    /* 🧾 Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #4facfe;
+      color: white;
+    }
+    td {
+      background: #f9f9f9;
+    }
+
+    /* 📱 Responsive */
+    @media (max-width: 600px) {
+      .container { padding: 20px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>💬 Sentiment Rating App</h1>
+    <p class="description">Analyze your text sentiment using <b>XGBoost + TF-IDF</b>.  
+      Enter a subject and description below and watch the magic happen ✨</p>
+
+    <form id="sentiment-form">
+      <div class="input-group">
+        <input type="text" id="title" name="title" placeholder="📰 Enter Subject" required>
+      </div>
+      <div class="input-group">
+        <textarea id="body" name="body" placeholder="📝 Enter Description..." rows="5" required></textarea>
+      </div>
+      <button type="submit" id="predict-btn">🔍 Predict Sentiment</button>
+    </form>
+
+    <div id="loader" style="display:none;">
+      <div class="loader"></div>
+      <p class="loading-text">Analyzing sentiment...</p>
+    </div>
+
+    <div id="result" class="result-card"></div>
+  </div>
+
+  <style>
+    /* 🌈 Animated Gradient Background */
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #89f7fe, #66a6ff);
+      background-size: 200% 200%;
+      animation: gradientShift 12s ease infinite;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* 🧊 Glass Container */
+    .container {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      padding: 40px 45px;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 500px;
+      animation: fadeIn 1.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .description {
+      color: #f3f3f3;
+      margin-bottom: 25px;
+      font-size: 15px;
+    }
+
+    /* ✨ Input Boxes */
+    .input-group {
+      position: relative;
+      margin: 15px 0;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      transition: 0.3s;
+      outline: none;
+    }
+    input:focus, textarea:focus {
+      box-shadow: 0 0 12px rgba(79,172,254,0.7);
+      transform: scale(1.02);
+    }
+
+    /* 🧭 Button */
+    #predict-btn {
+      background: linear-gradient(90deg, #4facfe, #00f2fe);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    #predict-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+      background: linear-gradient(90deg, #00f2fe, #4facfe);
+    }
+
+    /* 💫 Loader */
+    .loader {
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top: 5px solid #fff;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      margin: 20px auto;
+      animation: spin 1s linear infinite;
+    }
+    .loading-text {
+      color: #fff;
+      font-weight: 500;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 🧾 Results */
+    .result-card {
+      margin-top: 25px;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    .result-card.visible {
+      opacity: 1;
+    }
+    .bar-container {
+      background-color: rgba(255,255,255,0.4);
+      border-radius: 25px;
+      width: 100%;
+      height: 30px;
+      margin: 15px auto;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .bar-fill {
+      height: 30px;
+      border-radius: 25px;
+      width: 0%;
+      transition: width 1s ease-in-out;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    th {
+      background: #00f2fe;
+      color: #fff;
+    }
+    td {
+      color: #333;
+    }
+  </style>
+
+  <script>
+    const form = document.getElementById("sentiment-form");
+    const loader = document.getElementById("loader");
+    const resultDiv = document.getElementById("result");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resultDiv.classList.remove("visible");
+      loader.style.display = "block";
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch("/predict", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        loader.style.display = "none";
+
+        if (data.error) {
+          resultDiv.innerHTML = `<p style="color:#ffdddd; background:#ff4b4b; padding:10px; border-radius:6px;">❌ ${data.error}</p>`;
+          resultDiv.classList.add("visible");
+          return;
+        }
+
+        // ✨ Build Result Card
+        resultDiv.innerHTML = `
+          <div class="fade-in">
+            <h2 style="color:#fff;">🎯 Predicted Sentiment: ${data.sentiment}</h2>
+            <p style="color:#fff;"><strong>Model Confidence:</strong> ${data.confidence}%</p>
+            <div class="bar-container">
+              <div class="bar-fill" id="bar-fill" style="background-color:${data.bar_color}; width:0%;"></div>
+            </div>
+            <h3 style="color:#fff;">🧾 Class Probabilities</h3>
+            <table>
+              <tr><th>Sentiment</th><th>Confidence (%)</th></tr>
+              <tr><td>Negative 😞</td><td>${data.probabilities[0].toFixed(2)}</td></tr>
+              <tr><td>Neutral 😐</td><td>${data.probabilities[1].toFixed(2)}</td></tr>
+              <tr><td>Positive 😊</td><td>${data.probabilities[2].toFixed(2)}</td></tr>
+            </table>
+          </div>
+        `;
+
+        // Animate bar fill
+        setTimeout(() => {
+          document.getElementById("bar-fill").style.width = data.fill_percent + "%";
+        }, 200);
+
+        // Fade in result
+        resultDiv.classList.add("visible");
+
+      } catch (err) {
+        loader.style.display = "none";
+        resultDiv.innerHTML = `<p style="color:#ffdddd; background:#ff4b4b; padding:10px; border-radius:6px;">⚠️ ${err}</p>`;
+        resultDiv.classList.add("visible");
+      }
+    });
+  </script>
+</body>
+</html>
