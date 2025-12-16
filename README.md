@@ -1,4 +1,6 @@
 Multilingual Sentiment Analysis and Rating Classification System
+
+
 📌 Project Overview
 
 This project implements an end-to-end multilingual sentiment analysis system that classifies customer reviews into Negative, Neutral, and Positive categories. The solution handles multilingual input through automated translation, applies advanced NLP preprocessing, and uses a machine learning pipeline with XGBoost for accurate sentiment prediction. The trained model is deployed using both Streamlit and Flask, enabling interactive UI-based and API-based access.
