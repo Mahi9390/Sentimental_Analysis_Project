@@ -1,14 +1,76 @@
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
 import os
 import logging
+import re
+import string
+import emoji
+import nltk
+
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
 
 # -----------------------------
 # Suppress Streamlit warnings
 # -----------------------------
 logging.getLogger("streamlit.runtime.scriptrunner.script_runner").setLevel(logging.ERROR)
+
+# -----------------------------
+# NLTK Data Download (required for preprocessing)
+# -----------------------------
+@st.cache_resource
+def download_nltk_data():
+    nltk.download('stopwords', quiet=True)
+    nltk.download('punkt', quiet=True)
+    nltk.download('wordnet', quiet=True)
+    nltk.download('punkt_tab', quiet=True) # Ensure all necessary NLTK data is downloaded
+
+download_nltk_data()
+
+# -----------------------------
+# Text Cleaning Function (copied from notebook for consistency)
+# -----------------------------
+def preprocess_text(text):
+    if not isinstance(text, str):
+        text = str(text)
+
+    text = text.lower()
+
+    # Remove URLs
+    text = re.sub(r'http[s]?://\S+|www\.\S+', '', text)
+
+    # Remove @mentions and #hashtags
+    text = re.sub(r'[@#]\w+', '', text)
+
+    # Remove numbers
+    text = re.sub(r'\d+', '', text)
+
+    # Remove punctuation
+    text = text.translate(str.maketrans('', '', string.punctuation))
+
+    # Remove emojis
+    text = emoji.replace_emoji(text, replace='')
+
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Tokenize
+    tokens = word_tokenize(text)
+
+    # Remove stopwords
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words and len(word) > 1]
+
+    # Lemmatize
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+
+    return ' '.join(tokens)
+
 
 # -----------------------------
 # Load the trained model
@@ -52,8 +114,12 @@ if st.button("🔍 Predict Sentiment"):
     if not title_input or not body_input:
         st.warning("⚠️ Please enter both Title and Body.")
     else:
-        # Prepare input
-        input_df = pd.DataFrame({'title': [title_input], 'body': [body_input]})
+        # Preprocess input using the same function as training
+        processed_title = preprocess_text(title_input)
+        processed_body = preprocess_text(body_input)
+
+        # Prepare input DataFrame for the model
+        input_df = pd.DataFrame({'title': [processed_title], 'body': [processed_body]})
 
         # Predict
         prediction = model.predict(input_df)[0]
@@ -93,6 +159,7 @@ if st.button("🔍 Predict Sentiment"):
             margin-top: 10px;
         }}
         .bar-fill {{
+            width: {fill_percent}%; /* Use fill_percent here */
             background-color: {bar_color};
             height: 30px;
             border-radius: 25px;
