@@ -39,10 +39,20 @@ def load_model():
     if not os.path.exists(model_path):
         st.error("❌ Model file not found. Please upload 'sentiment_model.joblib' first.")
         st.stop()
-    return joblib.load(model_path)
+    
+    loaded_model = joblib.load(model_path)
+    
+    # FIX for XGBoost + sklearn fitted check issue after joblib load
+    if hasattr(loaded_model, 'named_steps'):
+        # Get the last step (should be your XGBClassifier)
+        last_step_name, last_step = loaded_model.steps[-1]
+        if hasattr(last_step, '_Booster') and last_step._Booster is not None:
+            # Monkey-patch to force sklearn to think it's fitted
+            last_step.__sklearn_is_fitted__ = lambda self=last_step: True
+    
+    return loaded_model
 
 model = load_model()
-
 # -----------------------------
 # Page setup
 # -----------------------------
