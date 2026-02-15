@@ -1,3 +1,5 @@
+DEMO LINK: https://sentimentalanalysisproject-ybpugapygkgisyy56dmp2v.streamlit.app/
+
 Multilingual Sentiment Analysis and Rating Classification System
 
 
