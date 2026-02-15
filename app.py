@@ -5,14 +5,9 @@ import joblib
 import numpy as np
 import os
 import logging
-import re
-import string
-import emoji
-import nltk
 
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
+# Import the TextPreprocessor class and NLTK download function
+from text_preprocessing import TextPreprocessor, download_nltk_resources
 
 # -----------------------------
 # Suppress Streamlit warnings
@@ -23,54 +18,17 @@ logging.getLogger("streamlit.runtime.scriptrunner.script_runner").setLevel(loggi
 # NLTK Data Download (required for preprocessing)
 # -----------------------------
 @st.cache_resource
-def download_nltk_data():
-    nltk.download('stopwords', quiet=True)
-    nltk.download('punkt', quiet=True)
-    nltk.download('wordnet', quiet=True)
-    nltk.download('punkt_tab', quiet=True) # Ensure all necessary NLTK data is downloaded
+def perform_nltk_downloads():
+    download_nltk_resources()
 
-download_nltk_data()
+perform_nltk_downloads()
 
-# -----------------------------
-# Text Cleaning Function (copied from notebook for consistency)
-# -----------------------------
-def preprocess_text(text):
-    if not isinstance(text, str):
-        text = str(text)
+# Initialize the TextPreprocessor outside the prediction block for efficiency
+@st.cache_resource
+def get_text_preprocessor():
+    return TextPreprocessor()
 
-    text = text.lower()
-
-    # Remove URLs
-    text = re.sub(r'http[s]?://\S+|www\.\S+', '', text)
-
-    # Remove @mentions and #hashtags
-    text = re.sub(r'[@#]\w+', '', text)
-
-    # Remove numbers
-    text = re.sub(r'\d+', '', text)
-
-    # Remove punctuation
-    text = text.translate(str.maketrans('', '', string.punctuation))
-
-    # Remove emojis
-    text = emoji.replace_emoji(text, replace='')
-
-    # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
-
-    # Tokenize
-    tokens = word_tokenize(text)
-
-    # Remove stopwords
-    stop_words = set(stopwords.words('english'))
-    tokens = [word for word in tokens if word not in stop_words and len(word) > 1]
-
-    # Lemmatize
-    lemmatizer = WordNetLemmatizer()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens]
-
-    return ' '.join(tokens)
-
+text_preprocessor = get_text_preprocessor()
 
 # -----------------------------
 # Load the trained model
@@ -114,9 +72,13 @@ if st.button("🔍 Predict Sentiment"):
     if not title_input or not body_input:
         st.warning("⚠️ Please enter both Title and Body.")
     else:
-        # Preprocess input using the same function as training
-        processed_title = preprocess_text(title_input)
-        processed_body = preprocess_text(body_input)
+        # Preprocess input using the TextPreprocessor instance
+        # First translate, then preprocess (as per original notebook logic)
+        translated_title = text_preprocessor.translate_text(title_input)
+        translated_body = text_preprocessor.translate_text(body_input)
+        
+        processed_title = text_preprocessor.preprocess_single_text(translated_title)
+        processed_body = text_preprocessor.preprocess_single_text(translated_body)
 
         # Prepare input DataFrame for the model
         input_df = pd.DataFrame({'title': [processed_title], 'body': [processed_body]})
