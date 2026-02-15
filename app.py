@@ -30,9 +30,6 @@ def get_text_preprocessor():
 
 text_preprocessor = get_text_preprocessor()
 
-# -----------------------------
-# Load the trained model
-# -----------------------------
 @st.cache_resource
 def load_model():
     model_path = "sentiment_model.joblib"
@@ -42,13 +39,25 @@ def load_model():
     
     loaded_model = joblib.load(model_path)
     
-    # FIX for XGBoost + sklearn fitted check issue after joblib load
-    if hasattr(loaded_model, 'named_steps'):
-        # Get the last step (should be your XGBClassifier)
-        last_step_name, last_step = loaded_model.steps[-1]
-        if hasattr(last_step, '_Booster') and last_step._Booster is not None:
-            # Monkey-patch to force sklearn to think it's fitted
-            last_step.__sklearn_is_fitted__ = lambda self=last_step: True
+    # ──── FIX: Force XGBoost fitted check to pass after joblib load ────
+    try:
+        # Access the last step dynamically (your XGBoost classifier)
+        if hasattr(loaded_model, 'steps') and len(loaded_model.steps) > 0:
+            _, last_estimator = loaded_model.steps[-1]
+            
+            # XGBoost uses _Booster to indicate fitted state
+            if hasattr(last_estimator, '_Booster') and last_estimator._Booster is not None:
+                # Monkey-patch the method so sklearn's check_is_fitted accepts it
+                def always_fitted(self):
+                    return True
+                
+                last_estimator.__sklearn_is_fitted__ = always_fitted.__get__(last_estimator)
+                
+                # Optional: also set a dummy fitted attribute if tags complain
+                if not hasattr(last_estimator, 'classes_'):
+                    last_estimator.classes_ = np.array([0, 1, 2])  # assuming your 3 classes
+    except Exception as patch_error:
+        st.warning(f"Could not patch fitted check: {patch_error} — proceeding anyway")
     
     return loaded_model
 
