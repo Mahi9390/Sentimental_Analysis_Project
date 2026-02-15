@@ -1,7 +1,0 @@
-flask
-joblib
-pandas
-numpy
-xgboost
-waitress
-scikit-learn
