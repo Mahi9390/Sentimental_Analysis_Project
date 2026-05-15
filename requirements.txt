@@ -1,0 +1,10 @@
+streamlit==1.54.0
+pandas==2.2.2
+numpy==1.26.4
+nltk
+emoji
+openpyxl==3.1.5
+deep_translator==1.9.1        # usually fine, but match if needed
+scikit-learn==1.5.2
+xgboost==2.0.3
+joblib==1.4.2

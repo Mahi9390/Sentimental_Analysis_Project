@@ -1,0 +1,9 @@
+@"
+store/
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+*.xlsx
+"@ | Out-File -Encoding UTF8 .gitignore
